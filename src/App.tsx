@@ -81,12 +81,29 @@ export default function App() {
   )
 }
 
+/** Embedded previews (iframes) usually block downloads, so offer copy only there. */
+const canDownload = (() => {
+  try {
+    return window.self === window.top
+  } catch {
+    return false
+  }
+})()
+
 function Header() {
   const { model, results, update, replace, reset } = useStore()
   const fileRef = useRef<HTMLInputElement>(null)
   const [confirmReset, setConfirmReset] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const clusters = results.clusters.length
+
+  const copyJson = () => {
+    const text = JSON.stringify(model, null, 2)
+    navigator.clipboard
+      .writeText(text)
+      .then(() => setNotice('Scenario copied. Paste it into a .json file to keep or share it.'))
+      .catch(() => setNotice('This browser blocked clipboard access. Use Export scenario instead.'))
+  }
 
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(model, null, 2)], { type: 'application/json' })
@@ -142,8 +159,13 @@ function Header() {
           />
         </div>
         <div className="scenario-actions">
-          <button type="button" className="btn" onClick={exportJson}>
-            Export scenario
+          {canDownload && (
+            <button type="button" className="btn" onClick={exportJson}>
+              Export scenario
+            </button>
+          )}
+          <button type="button" className="btn" onClick={copyJson}>
+            Copy scenario
           </button>
           <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
             Import
